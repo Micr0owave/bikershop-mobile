@@ -56,7 +56,7 @@ Aplicación móvil B2B desarrollada en React Native con Expo para mecánicos de 
 ### 1. Clonar y navegar al proyecto
 
 ```bash
-cd "c:\Users\jesus\OneDrive\Escritorio\github\bikershop-mobile\bikershop"
+cd "c:\Users\OneDrive\Escritorio\github\bikershop-mobile\bikershop"
 ```
 
 ### 2. Instalar dependencias

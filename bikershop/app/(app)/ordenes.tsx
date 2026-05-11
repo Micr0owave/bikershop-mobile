@@ -1,68 +1,97 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { apiGetOrders, OrdenResponse } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/components/AuthProvider';
 
-const orders = [
-  {
-    id: 'OT-2024-001',
-    client: 'María Sánchez',
-    bike: 'Trek Domane SL',
-    schedule: '11:30 AM',
-    status: 'En Proceso',
-  },
-  {
-    id: 'OT-2024-002',
-    client: 'Esteban Ruiz',
-    bike: 'Specialized Sirrus',
-    schedule: '13:00 PM',
-    status: 'Pendiente',
-  },
-  {
-    id: 'OT-2024-003',
-    client: 'Ana Pérez',
-    bike: 'Giant TCR',
-    schedule: '15:00 PM',
-    status: 'Completado',
-  },
-];
+const statusLabels: Record<string, string> = {
+  recibida: 'Recibida',
+  en_diagnostico: 'En diagnóstico',
+  esperando_repuestos: 'Esperando repuestos',
+  en_reparacion: 'En reparación',
+  control_calidad: 'Control calidad',
+  lista_para_entrega: 'Lista para entrega',
+  entregada: 'Entregada',
+  cancelada: 'Cancelada',
+};
 
 const statusMap: Record<string, string> = {
-  'En Proceso': '#0A7EA4',
-  Pendiente: '#E86A13',
-  Completado: '#2C9A63',
+  recibida: '#0A7EA4',
+  en_diagnostico: '#E86A13',
+  esperando_repuestos: '#E86A13',
+  en_reparacion: '#0A7EA4',
+  control_calidad: '#2C9A63',
+  lista_para_entrega: '#2C9A63',
+  entregada: '#2C9A63',
+  cancelada: '#B00020',
 };
 
 export default function OrdenesScreen() {
   const router = useRouter();
+  const { token } = useAuth();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'Todas' | 'En Proceso' | 'Pendiente' | 'Completado'>('Todas');
+  const [status, setStatus] = useState<'Todas' | string>('Todas');
+  const [orders, setOrders] = useState<OrdenResponse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredOrders = useMemo(
-    () =>
-      orders.filter((order) => {
-        const matchesText = [order.client, order.bike, order.id]
-          .join(' ')
-          .toLowerCase()
-          .includes(search.toLowerCase());
-        const matchesStatus = status === 'Todas' || order.status === status;
-        return matchesText && matchesStatus;
-      }),
-    [search, status],
-  );
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOrders() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiGetOrders(token);
+        if (isMounted) {
+          setOrders(response);
+        }
+      } catch {
+        if (isMounted) {
+          setOrders([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadOrders();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
+  const filteredOrders = useMemo(() => {
+    const query = search.toLowerCase();
+    return orders.filter((order) => {
+      const label = [order.numeroOrden, order.tipo, statusLabels[order.estado] ?? order.estado]
+        .join(' ')
+        .toLowerCase();
+      const matchesText = label.includes(query);
+      const matchesStatus = status === 'Todas' || order.estado === status;
+      return matchesText && matchesStatus;
+    });
+  }, [orders, search, status]);
+
+  const statusOptions = ['Todas', 'recibida', 'en_diagnostico', 'esperando_repuestos', 'en_reparacion', 'control_calidad', 'lista_para_entrega', 'entregada'];
 
   return (
     <ThemedView style={styles.page}>
       <View style={styles.toolbar}>
         <ThemedText type="title">Órdenes Activas</ThemedText>
-        <ThemedText style={styles.description}>Busca y organiza tareas por estado del servicio.</ThemedText>
+        <ThemedText style={styles.description}>Listado real de órdenes cargadas desde el backend.</ThemedText>
       </View>
 
       <TextInput
-        placeholder="Buscar por cliente, modelo o OT"
+        placeholder="Buscar por OT, tipo o estado"
         placeholderTextColor="#A1A1A1"
         value={search}
         onChangeText={setSearch}
@@ -70,12 +99,14 @@ export default function OrdenesScreen() {
       />
 
       <View style={styles.filters}>
-        {(['Todas', 'En Proceso', 'Pendiente', 'Completado'] as const).map((option) => (
+        {statusOptions.map((option) => (
           <Pressable
             key={option}
             onPress={() => setStatus(option)}
             style={[styles.filterButton, status === option && styles.filterActive]}>
-            <ThemedText style={[styles.filterText, status === option && styles.filterTextActive]}>{option}</ThemedText>
+            <ThemedText style={[styles.filterText, status === option && styles.filterTextActive]}>
+              {option === 'Todas' ? 'Todas' : statusLabels[option] ?? option}
+            </ThemedText>
           </Pressable>
         ))}
       </View>
@@ -84,19 +115,26 @@ export default function OrdenesScreen() {
         data={filteredOrders}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          loading ? (
+            <ThemedText style={styles.emptyText}>Cargando órdenes...</ThemedText>
+          ) : (
+            <ThemedText style={styles.emptyText}>No hay órdenes disponibles.</ThemedText>
+          )
+        }
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/ordenes/${item.id}`)}
             style={styles.orderCard}>
             <View style={styles.orderHeader}>
-              <ThemedText type="subtitle">{item.id}</ThemedText>
-              <View style={[styles.statusDot, { backgroundColor: statusMap[item.status] }]} />
+              <ThemedText type="subtitle">{item.numeroOrden}</ThemedText>
+              <View style={[styles.statusDot, { backgroundColor: statusMap[item.estado] ?? '#999' }]} />
             </View>
-            <ThemedText style={styles.orderMeta}>{item.client}</ThemedText>
-            <ThemedText style={styles.orderMeta}>{item.bike}</ThemedText>
-            <ThemedText style={styles.orderMeta}>Cita {item.schedule}</ThemedText>
+            <ThemedText style={styles.orderMeta}>{statusLabels[item.estado] ?? item.estado}</ThemedText>
+            <ThemedText style={styles.orderMeta}>{item.tipo}</ThemedText>
+            <ThemedText style={styles.orderMeta}>Ingreso {item.fechaIngreso ? new Date(item.fechaIngreso).toLocaleDateString('es-CL') : 'sin fecha'}</ThemedText>
             <View style={styles.badgeRow}>
-              <Badge membership={item.status === 'Completado' ? 'NORMAL' : item.status === 'Pendiente' ? 'SILVER' : 'GOLD'} />
+              <Badge membership={item.estado === 'entregada' ? 'NORMAL' : item.estado === 'recibida' ? 'GOLD' : 'SILVER'} />
             </View>
           </Pressable>
         )}
@@ -131,9 +169,11 @@ const styles = StyleSheet.create({
   },
   filters: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginBottom: 10,
+    gap: 8,
   },
   filterButton: {
     paddingVertical: 12,
@@ -185,5 +225,10 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     marginTop: 16,
+  },
+  emptyText: {
+    marginTop: 24,
+    marginHorizontal: 20,
+    color: '#5B6069',
   },
 });

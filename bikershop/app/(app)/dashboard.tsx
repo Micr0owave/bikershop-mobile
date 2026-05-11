@@ -1,35 +1,95 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { apiGetDashboardAlertas, apiGetDashboardEstados, apiGetDashboardHoy } from '@/lib/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/components/AuthProvider';
-import { Badge } from '@/components/ui/Badge';
 
-const overviewCards = [
-  { label: 'Órdenes en Proceso', value: '12', tone: '#0A7EA4' },
-  { label: 'Prioridad Alta', value: '4', tone: '#E86A13' },
-  { label: 'Última actividad', value: 'Revisión transmisión', tone: '#2C9A63' },
-];
-
-const task = {
-  client: 'María Sánchez',
-  bike: 'Trek Domane SL',
-  schedule: '11:30 AM',
-  orderId: 'OT-2024-001',
-  membership: 'GOLD' as const,
-};
+function formatCurrency(value: string | number) {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
 
 export default function DashboardScreen() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const router = useRouter();
+  const [hoy, setHoy] = useState<null | { ordenesRecibidas: number; ordenesEntregadas: number; ingresosHoy: string }>(null);
+  const [estados, setEstados] = useState<Record<string, number>>({});
+  const [alertas, setAlertas] = useState<null | { productosStockBajo: { nombre: string }[]; ordenesAtrasadas: { numeroOrden: string }[] }>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboard() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [hoyData, estadosData, alertasData] = await Promise.all([
+          apiGetDashboardHoy(token),
+          apiGetDashboardEstados(token),
+          apiGetDashboardAlertas(token),
+        ]);
+
+        if (!isMounted) return;
+        setHoy(hoyData);
+        setEstados(estadosData);
+        setAlertas(alertasData);
+      } catch {
+        // ignore fetch error for dashboard sections
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
+  const overviewCards = useMemo(
+    () => [
+      {
+        label: 'Órdenes recibidas hoy',
+        value: loading ? '...' : String(hoy?.ordenesRecibidas ?? 0),
+        tone: '#0A7EA4',
+      },
+      {
+        label: 'Órdenes entregadas',
+        value: loading ? '...' : String(hoy?.ordenesEntregadas ?? 0),
+        tone: '#2C9A63',
+      },
+      {
+        label: 'Ingresos hoy',
+        value: loading ? '...' : formatCurrency(hoy?.ingresosHoy ?? 0),
+        tone: '#0A7EA4',
+      },
+    ],
+    [hoy, loading],
+  );
+
+  const alertCount = alertas ? alertas.productosStockBajo.length + alertas.ordenesAtrasadas.length : 0;
+  const mostUsedStatus = Object.entries(estados)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 1)[0]?.[0] ?? 'sin datos';
 
   return (
     <ThemedView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <ThemedText type="title">Bienvenido, {user?.name ?? 'técnico'}</ThemedText>
-          <ThemedText style={styles.description}>Resumen rápido de órdenes y datos de rendimiento.</ThemedText>
+          <ThemedText style={styles.description}>Resumen real de órdenes y rendimiento desde tu backend.</ThemedText>
         </View>
 
         <View style={styles.grid}>
@@ -43,16 +103,26 @@ export default function DashboardScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="subtitle">Retomar última reparación</ThemedText>
+            <ThemedText type="subtitle">Estado de órdenes</ThemedText>
           </View>
           <View style={styles.taskCard}>
-            <Badge membership={task.membership} />
-            <ThemedText type="subtitle" style={styles.taskTitle}>{task.orderId}</ThemedText>
-            <ThemedText style={styles.taskMeta}>{task.client} • {task.bike}</ThemedText>
-            <ThemedText style={styles.taskMeta}>Cita {task.schedule}</ThemedText>
-            <Pressable style={styles.quickButton} onPress={() => router.push('/ordenes/OT-2024-001')}>
-              <ThemedText type="defaultSemiBold" style={styles.quickButtonText}>Retomar Reparación</ThemedText>
+            <ThemedText style={styles.taskMeta}>Estado más frecuente: {mostUsedStatus}</ThemedText>
+            <ThemedText style={styles.taskMeta}>Alertas activas: {loading ? '...' : alertCount}</ThemedText>
+            <Pressable style={styles.quickButton} onPress={() => router.push('/ordenes')}>
+              <ThemedText type="defaultSemiBold" style={styles.quickButtonText}>Ver órdenes</ThemedText>
             </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="subtitle">Alertas</ThemedText>
+          </View>
+          <View style={styles.alertCard}>
+            <ThemedText style={styles.alertTitle}>Productos con stock bajo</ThemedText>
+            <ThemedText style={styles.alertDetail}>{loading ? 'Cargando...' : `${alertas?.productosStockBajo.length ?? 0} productos`}</ThemedText>
+            <ThemedText style={styles.alertTitle}>Órdenes atrasadas</ThemedText>
+            <ThemedText style={styles.alertDetail}>{loading ? 'Cargando...' : `${alertas?.ordenesAtrasadas.length ?? 0} órdenes`}</ThemedText>
           </View>
         </View>
       </ScrollView>
@@ -115,9 +185,6 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 2,
   },
-  taskTitle: {
-    marginTop: 6,
-  },
   taskMeta: {
     color: '#5B6069',
   },
@@ -132,5 +199,22 @@ const styles = StyleSheet.create({
   quickButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  alertCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    shadowColor: '#00000012',
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  alertTitle: {
+    fontWeight: '700',
+    marginTop: 10,
+  },
+  alertDetail: {
+    color: '#5B6069',
+    marginTop: 4,
   },
 });

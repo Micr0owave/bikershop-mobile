@@ -1,15 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-type Membership = 'GOLD' | 'SILVER' | 'NORMAL';
+import { apiLogin, apiResetPassword } from '@/lib/api';
 
 type User = {
   name: string;
   email: string;
-  specialty: string;
-  branch: string;
-  membership: Membership;
-  tallerId: string;
+  role: string;
 };
 
 type AuthContextData = {
@@ -36,10 +33,6 @@ const STORAGE_KEYS = {
   token: 'velo_jwt',
   user: 'velo_user',
 };
-
-function buildJwt(email: string, tallerId: string) {
-  return `VEL0-${email.replace(/[^a-zA-Z0-9]/g, '')}-${tallerId}-${Math.floor(Date.now() / 1000)}`;
-}
 
 function formatRut(rut: string) {
   return rut.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -88,22 +81,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    const tallerId = 'TALLER-CHL-001';
-    const newUser: User = {
-      name: 'Camilo Pizarro',
-      email,
-      specialty: 'Mantenimiento y diagnóstico',
-      branch: 'Santiago Centro',
-      membership: 'GOLD',
-      tallerId,
-    };
-    const jwt = buildJwt(email, tallerId);
+    try {
+      const response = await apiLogin(email, password);
+      const loggedUser: User = {
+        name: `${response.nombre} ${response.apellido}`,
+        email,
+        role: response.rol,
+      };
 
-    await AsyncStorage.setItem(STORAGE_KEYS.token, jwt);
-    await AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(newUser));
-    setToken(jwt);
-    setUser(newUser);
-    return true;
+      await AsyncStorage.setItem(STORAGE_KEYS.token, response.token);
+      await AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(loggedUser));
+      setToken(response.token);
+      setUser(loggedUser);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const logout = async () => {
@@ -115,7 +108,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const sendResetEmail = async (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+
+    try {
+      await apiResetPassword(email);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const validateRut = (rut: string) => {

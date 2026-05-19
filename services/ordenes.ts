@@ -1,65 +1,16 @@
-import api from './api';
+import { USE_MOCK_API } from './config';
+import * as real from './ordenes.api';
+import * as mocks from './ordenes.mocks';
 
-export async function getOrdenes() {
-  const res = await api.get('/ordenes');
-  return Array.isArray(res.data) ? res.data : (res.data.ordenes ?? []);
-}
-
-export async function getOrden(id: string) {
-  const res = await api.get(`/ordenes/${id}`);
-  return res.data;
-}
-
-export async function cambiarEstadoOrden(id: string, estado: string) {
-  const res = await api.patch(`/ordenes/${id}/estado`, { estado });
-  return res.data;
-}
-
-export async function getOrdenesEstados() {
-  const res = await api.get('/ordenes/estados');
-  return res.data;
-}
-
-export async function getComentarios(id: string) {
-  const res = await api.get(`/ordenes/${id}/comentarios`);
-  return Array.isArray(res.data) ? res.data : (res.data.comentarios ?? []);
-}
-
-export async function postComentario(id: string, texto: string) {
-  const res = await api.post(`/ordenes/${id}/comentarios`, { texto });
-  return res.data;
-}
-
-export async function getMultimedia(id: string) {
-  const res = await api.get(`/ordenes/${id}/multimedia`);
-  return Array.isArray(res.data) ? res.data : (res.data.multimedia ?? []);
-}
-
-export async function postMultimedia(id: string, uri: string, mimeType: string = 'image/jpeg') {
-  const form = new FormData();
-  form.append('foto', { uri, type: mimeType, name: 'foto.jpg' } as any);
-  const res = await api.post(`/ordenes/${id}/multimedia`, form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return res.data;
-}
-
-export async function deleteMultimedia(id: string, mediaId: string) {
-  const res = await api.delete(`/ordenes/${id}/multimedia/${mediaId}`);
-  return res.data;
-}
-
-export async function getProductosOrden(id: string) {
-  const res = await api.get(`/ordenes/${id}/productos`);
-  return Array.isArray(res.data) ? res.data : (res.data.productos ?? []);
-}
-
-export async function postProductoOrden(id: string, productoId: string, cantidad: number = 1) {
-  const res = await api.post(`/ordenes/${id}/productos`, { productoId, cantidad });
-  return res.data;
-}
-
-export async function deleteProductoOrden(id: string, productoId: string) {
-  const res = await api.delete(`/ordenes/${id}/productos/${productoId}`);
-  return res.data;
-}
+export const getOrdenes          = USE_MOCK_API ? mocks.mockGetOrdenes          : real.getOrdenes;
+export const getOrden            = USE_MOCK_API ? mocks.mockGetOrden            : real.getOrden;
+export const cambiarEstadoOrden  = USE_MOCK_API ? mocks.mockCambiarEstadoOrden  : real.cambiarEstadoOrden;
+export const getOrdenesEstados   = USE_MOCK_API ? mocks.mockGetOrdenesEstados   : real.getOrdenesEstados;
+export const getComentarios      = USE_MOCK_API ? mocks.mockGetComentarios      : real.getComentarios;
+export const postComentario      = USE_MOCK_API ? mocks.mockPostComentario      : real.postComentario;
+export const getMultimedia       = USE_MOCK_API ? mocks.mockGetMultimedia       : real.getMultimedia;
+export const postMultimedia      = USE_MOCK_API ? mocks.mockPostMultimedia      : real.postMultimedia;
+export const deleteMultimedia    = USE_MOCK_API ? mocks.mockDeleteMultimedia    : real.deleteMultimedia;
+export const getProductosOrden   = USE_MOCK_API ? mocks.mockGetProductosOrden   : real.getProductosOrden;
+export const postProductoOrden   = USE_MOCK_API ? mocks.mockPostProductoOrden   : real.postProductoOrden;
+export const deleteProductoOrden = USE_MOCK_API ? mocks.mockDeleteProductoOrden : real.deleteProductoOrden;

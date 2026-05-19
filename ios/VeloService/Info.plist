@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>bikershop</string>
-          <string>com.anonymous.veloservice</string>
+          <string>com.aframuz.veloservice</string>
         </array>
       </dict>
       <dict>

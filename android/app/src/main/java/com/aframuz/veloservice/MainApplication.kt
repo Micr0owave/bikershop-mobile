@@ -1,4 +1,4 @@
-package com.anonymous.veloservice
+package com.aframuz.veloservice
 
 import android.app.Application
 import android.content.res.Configuration

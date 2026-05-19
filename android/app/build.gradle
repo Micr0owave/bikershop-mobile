@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.veloservice'
+    namespace 'com.aframuz.veloservice'
     defaultConfig {
-        applicationId 'com.anonymous.veloservice'
+        applicationId 'com.aframuz.veloservice'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

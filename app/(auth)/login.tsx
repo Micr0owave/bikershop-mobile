@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Image,
   Pressable,
   StyleSheet,
@@ -48,11 +49,13 @@ export default function LoginScreen() {
       const success = await login(email.trim(), password.trim());
       if (!success) {
         setError('Revisa tu correo y contraseña e intenta nuevamente.');
+        Alert.alert('Login unsuccessful', 'Revisa tu correo y contraseña e intenta nuevamente.');
         return;
       }
       router.replace('/dashboard');
     } catch (e) {
       setError('Error de red o del servidor.');
+      Alert.alert('Login unsuccessful', 'Error de red o del servidor.');
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +103,7 @@ export default function LoginScreen() {
         <View style={styles.card}>
           <ThemedText style={styles.heading}>Bienvenid@</ThemedText>
           <ThemedText style={styles.subheading}>
-            Ingresa con tu cuenta para acceder al panel del taller.
+            Ingresa con tu cuenta para acceder.
           </ThemedText>
 
           {/* Email */}
@@ -159,14 +162,14 @@ export default function LoginScreen() {
             onPress={handleSubmit}
             disabled={busy}>
             <ThemedText style={styles.btnText}>
-              {busy ? 'Ingresando...' : 'Ingresar al panel'}
+              {busy ? 'Ingresando...' : 'Ingresar'}
             </ThemedText>
             {!busy && <Ionicons name="arrow-forward" size={17} color="#fff" />}
           </Pressable>
         </View>
 
         {/* ── Feature chips ── */}
-        <View style={styles.chipsRow}>
+        {/* <View style={styles.chipsRow}>
           <View style={styles.featureChip}>
             <View style={styles.chipIcon}>
               <Ionicons name="flash-outline" size={16} color="#fff" />
@@ -185,7 +188,7 @@ export default function LoginScreen() {
               <ThemedText style={styles.chipDesc}>Mantenciones, motor Bosch/Shimano</ThemedText>
             </View>
           </View>
-        </View>
+        </View> */}
 
       </ScrollView>
     </View>

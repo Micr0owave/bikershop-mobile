@@ -259,7 +259,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.veloservice";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aframuz.veloservice";
 				PRODUCT_NAME = "VeloService";
 				SWIFT_OBJC_BRIDGING_HEADER = "VeloService/VeloService-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -288,7 +288,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.veloservice";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aframuz.veloservice";
 				PRODUCT_NAME = "VeloService";
 				SWIFT_OBJC_BRIDGING_HEADER = "VeloService/VeloService-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

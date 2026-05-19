@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       const loggedUser = await loginService(email, password);
       setUser(loggedUser);
-      return true;
+      return loggedUser !== null;
     } catch {
       setUser(null);
       return false;
